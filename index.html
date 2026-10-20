@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <title>Space Station — Robot de maintenance</title>
+
+    <link rel="stylesheet" type="text/css" href="style.css?v=4">
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background-color: #050812;
+      }
+      #settings-panel {
+        display: none;
+      }
+      #settings-panel.open {
+        display: block !important;
+      }
+    </style>
+
+    <!-- p5.js Core -->
+    <script src="libraries/p5.min.js"></script>
+    <script src="libraries/p5.sound.min.js"></script>
+
+    <!-- Bibliothèques dynamiques d'animation et de célébration spectaculaire -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+
+    <!-- Classe de base obligatoire fournie par le cours -->
+    <script src="vehicle.js"></script>
+
+    <!-- Intégration MediaPipe Tasks Vision (ESM) -->
+    <script type="module">
+      import { FilesetResolver, HandLandmarker } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
+      window.FilesetResolver = FilesetResolver;
+      window.HandLandmarker = HandLandmarker;
+      window.dispatchEvent(new CustomEvent('mediapipe-ready'));
+    </script>
+
+    <!-- Entités du monde Space Station (héritent toutes de Vehicle) -->
+    <script src="playerRobot.js"></script>
+    <script src="battery.js"></script>
+    <script src="repairModule.js"></script>
+    <script src="obstacle.js"></script>
+    <script src="maintenanceDrone.js"></script>
+    <script src="securityDrone.js"></script>
+    <script src="decoyFlare.js"></script>
+    <script src="boostPad.js"></script>
+    <script src="handController.js"></script>
+
+    <!-- Point d'entrée principal -->
+    <script src="sketch.js"></script>
+  </head>
+  <body>
+    <!-- Boutons d'action rapide en bas d'écran (Bouclier & Leurre) -->
+    <div id="quick-action-bar">
+      <button id="btn-shield" class="quick-btn" title="Activer le bouclier protecteur [Touche B]">
+        <span class="icon">🛡️</span>
+        <span class="label">Bouclier [B]</span>
+        <span id="shield-indicator" class="badge">Prêt</span>
+      </button>
+      <button id="btn-flare" class="quick-btn" title="Larguer un leurre déconcentrant [Touche F]">
+        <span class="icon">🍓</span>
+        <span class="label">Leurre [F]</span>
+        <span id="flare-indicator" class="badge">Prêt</span>
+      </button>
+    </div>
+
+    <!-- Bouton discret des paramètres ⚙️ -->
+    <button id="settings-btn" title="Paramètres de simulation" aria-label="Paramètres">⚙️ Options</button>
+
+    <!-- Panneau de personnalisation rapide -->
+    <div id="settings-panel" role="region" aria-label="Paramètres de jeu">
+      <div class="panel-header">
+        <h3>⚙️ Paramètres Space Station</h3>
+        <button id="close-settings" class="close-btn" aria-label="Fermer">✕</button>
+      </div>
+
+      <div class="setting-row">
+        <label for="opt-difficulty">Difficulté</label>
+        <select id="opt-difficulty">
+          <option value="easy">Facile</option>
+          <option value="normal" selected>Normal</option>
+          <option value="hard">Difficile</option>
+        </select>
+      </div>
+
+      <div class="setting-row">
+        <label for="opt-speed">Vitesse du robot</label>
+        <select id="opt-speed">
+          <option value="3.5">Lente (3.5)</option>
+          <option value="4.8" selected>Normale (4.8)</option>
+          <option value="6.2">Rapide (6.2)</option>
+          <option value="7.5">Turbo (7.5)</option>
+        </select>
+      </div>
+
+      <div class="setting-row">
+        <label for="opt-drone-speed">Vitesse des drones</label>
+        <select id="opt-drone-speed">
+          <option value="2.8">Lente (2.8)</option>
+          <option value="3.6" selected>Normale (3.6)</option>
+          <option value="4.5">Rapide (4.5)</option>
+          <option value="5.4">Cauchemar (5.4)</option>
+        </select>
+      </div>
+
+      <div class="setting-row">
+        <label for="opt-drone-radius">Portée radar drones</label>
+        <select id="opt-drone-radius">
+          <option value="170">Courte (170 px)</option>
+          <option value="230" selected>Standard (230 px)</option>
+          <option value="320">Longue (320 px)</option>
+        </select>
+      </div>
+
+      <div class="setting-row">
+        <label for="opt-drones">Drones hostiles</label>
+        <select id="opt-drones">
+          <option value="1">Peu (1)</option>
+          <option value="2" selected>Moyen (2)</option>
+          <option value="4">Beaucoup (4)</option>
+        </select>
+      </div>
+
+      <div class="setting-row">
+        <label for="opt-batteries">Batteries</label>
+        <select id="opt-batteries">
+          <option value="4" selected>Quelques-unes (4)</option>
+          <option value="8">Davantage (8)</option>
+        </select>
+      </div>
+
+      <div class="setting-row">
+        <label for="opt-effects">Effets visuels</label>
+        <select id="opt-effects">
+          <option value="on" selected>Activés (Particules)</option>
+          <option value="off">Désactivés (Allégé)</option>
+        </select>
+      </div>
+
+      <div class="setting-row">
+        <label for="opt-control">Contrôle joueur</label>
+        <select id="opt-control">
+          <option value="auto" selected>Auto (Index / Clavier)</option>
+          <option value="mouse">Suivre la souris</option>
+          <option value="keyboard">Clavier uniquement (ZQSD)</option>
+        </select>
+      </div>
+
+      <div class="panel-actions">
+        <button id="restart-game-btn" class="action-btn btn-primary">Recommencer (R)</button>
+        <button id="toggle-debug-btn" class="action-btn btn-secondary">Debug (D)</button>
+      </div>
+    </div>
+  </body>
+</html>
