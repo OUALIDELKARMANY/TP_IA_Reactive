@@ -287,6 +287,38 @@ test('AMÉLIORATION 5 : Déploiement de Fraises (DecoyFlare) par PlayerRobot', (
   assert.equal(robot.canDeployFlare(), false, 'Leurres en cooldown immédiat');
 });
 
+test('AMÉLIORATION 6 : Réouverture périodique des capsules de batteries (Respawn / Recharge d urgence)', () => {
+  const scope = createUpgradeScope();
+  const { Battery } = scope;
+
+  const battery = new Battery(200, 200, 35);
+  const player = { pos: scope.createVector(205, 205), r: 14, recharge: () => {}, energy: 80, batteriesCollected: 0 };
+
+  // 1. Collecte initiale
+  const collected = battery.checkCollection(player);
+  assert.equal(collected, true);
+  assert.equal(battery.collected, true);
+
+  // 2. Pendant le timer, la batterie n'est pas collectible
+  battery.update(player);
+  assert.equal(battery.checkCollection(player), false, 'La batterie reste indisponible pendant la recharge');
+
+  // 3. Avancement rapide jusqu'au délai
+  battery.respawnTimer = battery.respawnDelay - 1;
+  battery.update(player);
+  assert.equal(battery.collected, false, 'La batterie doit s être réouverte une fois le délai atteint');
+
+  // 4. Nouvelle collecte possible
+  const reCollected = battery.checkCollection(player);
+  assert.equal(reCollected, true, 'La batterie réouverte peut être collectée à nouveau');
+
+  // 5. Accélération si énergie critique (< 30)
+  player.energy = 20;
+  const initialTimer = battery.respawnTimer;
+  battery.update(player);
+  assert.equal(battery.respawnTimer - initialTimer, 2, 'La vitesse de régénération double quand le joueur est en danger');
+});
+
 test('RÈGLE DU PROJET : vehicle.js est intact et non modifié', () => {
   const vPath = path.resolve('5-3-PathFollowingComplex/vehicle.js');
   const content = readFileSync(vPath, 'utf8');

@@ -19,6 +19,12 @@ class Battery extends Vehicle {
 
     // Déphasage d'animation lumineuse
     this.pulseOffset = random(100);
+
+    // Système de réouverture périodique des batteries
+    this.respawnTimer = 0;
+    this.respawnDelay = 600; // ~10 secondes à 60 FPS
+    this.isRecharging = false;
+    this.openProgress = 1; // 0 (fermé) à 1 (ouvert)
   }
 
   /**
@@ -27,17 +33,45 @@ class Battery extends Vehicle {
   applyForce(force) {}
 
   /**
-   * Objet statique : ne modifie ni vitesse ni position.
+   * Mise à jour de l'effet de collecte et gestion du rechargement / réouverture périodique.
+   * Si la batterie est collectée, elle commence un cycle de régénération et se rouvre.
+   * Si le joueur est en état d'énergie critique (< 30%), la réouverture s'accélère.
+   * @param {PlayerRobot} [playerRobot]
    */
-  update() {
+  update(playerRobot = null) {
     if (this.collectEffectTimer > 0) {
       this.collectEffectTimer--;
+    }
+
+    if (this.collected) {
+      // Si le joueur est faible en énergie (< 30%), la batterie se régénère 2x plus vite
+      let speedFactor = (playerRobot && playerRobot.energy < 30) ? 2 : 1;
+      this.respawnTimer += speedFactor;
+
+      if (this.respawnTimer >= this.respawnDelay) {
+        this.reopen();
+      }
+    }
+  }
+
+  /**
+   * Rouvre la batterie pour permettre une nouvelle recharge
+   */
+  reopen() {
+    this.collected = false;
+    this.respawnTimer = 0;
+    this.collectEffectTimer = 0;
+    if (typeof window !== 'undefined' && typeof window.createSparks === 'function') {
+      window.createSparks(this.pos.x, this.pos.y, 14, '#00e5ff');
+    }
+    if (typeof window !== 'undefined' && typeof window.createFloatingText === 'function') {
+      window.createFloatingText(this.pos.x, this.pos.y - 10, 'BATTERIE DISPONIBLE !', '#00e5ff');
     }
   }
 
   /**
    * Tente de collecter la batterie si le robot entre dans son rayon de collecte.
-   * Empêche toute collecte multiple.
+   * Empêche toute collecte multiple tant qu'elle n'est pas réouverte.
    * @param {PlayerRobot} robot 
    * @returns {boolean} true si la batterie a été collectée
    */
@@ -49,6 +83,7 @@ class Battery extends Vehicle {
 
     if (d <= collectionRadius) {
       this.collected = true;
+      this.respawnTimer = 0;
       this.collectEffectTimer = 25; // 25 frames d'effet visuel
       robot.recharge(this.energyValue);
       robot.batteriesCollected = (robot.batteriesCollected || 0) + 1;
@@ -65,19 +100,54 @@ class Battery extends Vehicle {
    * Rendu visuel d'une cellule d'énergie dorée avec halo lumineux.
    */
   show() {
-    // Si déjà collectée, affichage éventuel de l'onde d'absorption
+    // Si collectée : on affiche le socle de chargement avec jauge de réouverture
     if (this.collected) {
+      push();
+      translate(this.pos.x, this.pos.y);
+
+      // Onde d'absorption initiale
       if (this.collectEffectTimer > 0) {
-        push();
-        translate(this.pos.x, this.pos.y);
         noFill();
         let alpha = map(this.collectEffectTimer, 25, 0, 200, 0);
         let rad = map(this.collectEffectTimer, 25, 0, this.r, this.r * 3.5);
         stroke(255, 214, 0, alpha);
         strokeWeight(2);
         circle(0, 0, rad * 2);
-        pop();
       }
+
+      // Socle métallique fermé en recharge
+      stroke('#334155');
+      strokeWeight(1.2);
+      fill('#0f172a');
+      circle(0, 0, this.r * 1.8);
+
+      // Anneau de progression de la réouverture (cyan/bleu électrique)
+      let progress = typeof constrain === 'function' ? constrain(this.respawnTimer / this.respawnDelay, 0, 1) : Math.min(1, Math.max(0, this.respawnTimer / this.respawnDelay));
+      noFill();
+      stroke('#00e5ff');
+      strokeWeight(2);
+      if (typeof arc === 'function') {
+        let halfPi = typeof HALF_PI !== 'undefined' ? HALF_PI : Math.PI / 2;
+        let twoPi = typeof TWO_PI !== 'undefined' ? TWO_PI : Math.PI * 2;
+        arc(0, 0, this.r * 1.8, this.r * 1.8, -halfPi, -halfPi + twoPi * progress);
+      } else {
+        circle(0, 0, this.r * 1.8 * progress);
+      }
+
+      // Icône de chargement ou pulsation
+      let fCount = typeof frameCount !== 'undefined' ? frameCount : 0;
+      fill(0, 229, 255, 80 + Math.sin(fCount * 0.1) * 60);
+      noStroke();
+      circle(0, 0, this.r * 0.6);
+
+      // Décompte ou texte indicatif
+      fill('#94a3b8');
+      textSize(8);
+      textAlign(CENTER, TOP);
+      let secLeft = Math.ceil((this.respawnDelay - this.respawnTimer) / 60);
+      text(`Recharge ${secLeft}s`, 0, this.r * 1.1);
+
+      pop();
       return;
     }
 

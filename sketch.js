@@ -343,9 +343,9 @@ function draw() {
     mod.show(playerRobot);
   }
 
-  // 6. Batteries d'énergie à collecter
+  // 6. Batteries d'énergie à collecter (se rouvrent périodiquement, accélérées si joueur faible)
   for (let bat of batteries) {
-    bat.update();
+    bat.update(playerRobot);
     if (playerRobot) {
       let collected = bat.checkCollection(playerRobot);
       if (collected) {

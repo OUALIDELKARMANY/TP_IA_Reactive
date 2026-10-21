@@ -139,6 +139,9 @@ Chaque agent combine un ensemble de forces élémentaires selon des priorités e
    - Traitement par miroir horizontal, conversion d'échelle normalisée $[0, 1] \to [\text{largeur}, \text{hauteur}]$, lissage exponentiel (filtre passe-bas) pour éliminer les tremblements, et transition automatique vers les commandes clavier/souris en cas de perte de visibilité.
 5. **Panneau de Réglages en Temps Réel** :
    - Ajustement de la vitesse du joueur, vitesse des drones de sécurité et rayon de détection des ennemis.
+6. **Réouverture Périodique des Batteries (Recharge d'Urgence)** :
+   - Après collecte, le socle de chaque batterie entre en phase de recharge avec affichage d'un anneau de progression cyan et décompte en secondes (~10s).
+   - **Assistance survie** : si le robot est en état d'alerte critique (**énergie < 30%**), la vitesse de réouverture des capsules de batterie est **doublée**, permettant au joueur de trouver rapidement de nouvelles réserves d'énergie et d'éviter les situations de blocage.
 
 ---
 
